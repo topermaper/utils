@@ -1,48 +1,62 @@
 import time
 import collections
+import logging
 
-SLEEP_STEP = 50           #sleep step in microseconds
-DEFAULT_PRECISION = 0.01  #percentage over specified iterations per second, 0.1 means 10%
+
 
 class LoopController(object):
 
-
-    def __init__(self, iterations_ps, precision=DEFAULT_PRECISION):
+    # Buffer size in miliseconds
+    def __init__(self, target_iter, buffer_size=1000, log_level="INFO"):
         super()
-        self._precision = precision
-        self._iterations_ps = iterations_ps
-        self._sleep_time = int(1000000 / iterations_ps)
-        self._buffer_size = iterations_ps * 1 # we want a 1 seconds buffer
+        self._target_iter = target_iter
+        self._sleep_time = 1 / target_iter
+
+        # We can not calculate with a single element buffer, minimum buffer size is 2
+        self._buffer_size = max(2,int((target_iter * buffer_size) / 1000))
 
         self._d = collections.deque([], maxlen=self._buffer_size)
-
         self._iter_counter = 0
 
+        logging.basicConfig(level=log_level, force=True)
+        logging.info("Initialising {}".format(__name__))
+        logging.info("Buffer size: {} elements".format(str(self._buffer_size)))
 
-    def new_iteration(self):
+
+    def registerIteration(self):
+        # Get current timestamp
         self._d.append(time.time())
 
+        # Increase iteration counter
         self._iter_counter += 1
 
+        # We don't want to do the math every iteration
         if self._iter_counter == self._buffer_size:
-            # too fast, increase sleep time
+            # Get iterations per second
             current_speed = self.getIterationSpeed()
-            print("sending at: {0:.3f} msg/s".format(current_speed))
-            #print(self._sleep_time)
-            if current_speed > self._iterations_ps * (1 + self._precision):
-                self._sleep_time += SLEEP_STEP
-            elif current_speed < self._iterations_ps * (1 - self._precision):
-                self._sleep_time -= SLEEP_STEP
 
-            self._iter_counter = 0
- 
+            # Calculate iteration real work time.
+            # This is the time the iteration spent doing something other than sleep
+            it_time = (1/current_speed) - self._sleep_time
+    
+            # Calculate the new sleep time if we want to make the target
+            # based on the previously calculated iteration time
+            self._sleep_time = (1/self._target_iter) - it_time
+            
+            # Increase iteration counter
+            self._iter_counter = 0 
 
-        print('sleeping {}'.format(str(self._sleep_time)))
-        time.sleep(self._sleep_time/1000000)
+        logging.debug("Sleeping {} seconds".format(str(self._sleep_time)))
+
+        # Sleep a bit
+        time.sleep(self._sleep_time)
 
 
+    # Get current iterations per second
     def getIterationSpeed(self):
         try:
+            # First and last element difference is the time it took
+            # to process (_buffer_size - 1) elements
             return (self._buffer_size-1)/(self._d[-1]-self._d[0])
         except ZeroDivisionError:
             return -1
