@@ -38,11 +38,11 @@ class LoopController(object):
             # Calculate iteration real work time.
             # This is the time the iteration spent doing something other than sleep
             it_time = (1/current_speed) - self._sleep_time
-    
+
             # Calculate the new sleep time if we want to make the target
             # based on the previously calculated iteration time
-            self._sleep_time = (1/self._target_iter) - it_time
-            
+            self._sleep_time = max(0,(1/self._target_iter) - it_time)
+ 
             # Increase iteration counter
             self._iter_counter = 0 
 
