@@ -6,9 +6,10 @@ import logging
 
 class LoopController(object):
 
+
     # Buffer size in miliseconds
-    def __init__(self, target_iter, buffer_size=1000, log_level="INFO"):
-        super()
+    def __init__(self, target_iter, buffer_size=1000):
+
         self._target_iter = target_iter
         self._sleep_time = 1 / target_iter
 
@@ -17,10 +18,6 @@ class LoopController(object):
 
         self._d = collections.deque([], maxlen=self._buffer_size)
         self._iter_counter = 0
-
-        logging.basicConfig(level=log_level, force=True)
-        logging.info("Initialising {}".format(__name__))
-        logging.info("Buffer size: {} elements".format(str(self._buffer_size)))
 
 
     def registerIteration(self):
@@ -45,8 +42,6 @@ class LoopController(object):
  
             # Increase iteration counter
             self._iter_counter = 0 
-
-        logging.debug("Sleeping {} seconds".format(str(self._sleep_time)))
 
         # Sleep a bit
         time.sleep(self._sleep_time)
